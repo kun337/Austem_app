@@ -47,6 +47,25 @@ def get_sample_manufacturing_data() -> pd.DataFrame:
     return pd.DataFrame(data)
 
 
+def read_csv_robustly(uploaded_file) -> pd.DataFrame:
+    """
+    한글 Windows CSV(CP949, EUC-KR), UTF-8 BOM(utf-8-sig) 등 다양한 인코딩 오류를
+    자동으로 감지하여 디코딩 에러 없이 안전하게 DataFrame으로 변환하는 함수입니다.
+    """
+    # 국내 공공기관 및 엑셀 저장 CSV에서 사용되는 대표적인 인코딩 형태 목록
+    encodings_to_try = ['utf-8-sig', 'cp949', 'euc-kr', 'utf-8', 'ansi', 'utf-16']
+    file_bytes = uploaded_file.getvalue()
+    
+    for enc in encodings_to_try:
+        try:
+            return pd.read_csv(io.BytesIO(file_bytes), encoding=enc)
+        except (UnicodeDecodeError, Exception):
+            continue
+            
+    # 모든 인코딩 실패 시 fallback (오류 문자 교체 후 강제 변환)
+    return pd.read_csv(io.BytesIO(file_bytes), encoding='utf-8', errors='replace')
+
+
 def analyze_data_structure(df: pd.DataFrame) -> dict:
     """
     데이터프레임의 구조, 수치형/범주형 컬럼, 결측치, 이상치, 긴급 지표를 분석하는 순수 데이터 처리 함수입니다.
@@ -207,8 +226,8 @@ user_api_key = st.sidebar.text_input(
 
 if uploaded_file is not None:
     try:
-        if uploaded_file.name.endswith('.csv'):
-            df_raw = pd.read_csv(uploaded_file)
+        if uploaded_file.name.lower().endswith('.csv'):
+            df_raw = read_csv_robustly(uploaded_file)
         else:
             df_raw = pd.read_excel(uploaded_file)
         st.sidebar.success(f"✅ 파일 업로드 성공: {uploaded_file.name}")
