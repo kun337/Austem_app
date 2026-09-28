@@ -1,11 +1,16 @@
-
 import os
 import io
 import pandas as pd
 import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
+
+# Plotly 패키지 미설치 환경(Streamlit Cloud 등)에서 예외 발생 방지 및 방어 코드
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    HAS_PLOTLY = True
+except ImportError:
+    HAS_PLOTLY = False
 
 # 페이지 기본 설정을 최상단에 구성 (타이틀, 레이아웃, 아이콘)
 st.set_page_config(
@@ -324,32 +329,49 @@ else:
     
     with tab1:
         st.subheader("막대 그래프")
-        fig_bar = px.bar(
-            filtered_df, 
-            x=selected_x, 
-            y=selected_y, 
-            color=color_val,
-            title=f"[{selected_x}] 별 [{selected_y}] 비교",
-            text_auto='.2s',
-            template="plotly_white",
-            color_discrete_sequence=px.colors.qualitative.Bold
-        )
-        fig_bar.update_layout(xaxis_tickangle=-30, margin=dict(l=20, r=20, t=50, b=50))
-        st.plotly_chart(fig_bar, use_container_width=True)
+        if HAS_PLOTLY:
+            fig_bar = px.bar(
+                filtered_df, 
+                x=selected_x, 
+                y=selected_y, 
+                color=color_val,
+                title=f"[{selected_x}] 별 [{selected_y}] 비교",
+                text_auto='.2s',
+                template="plotly_white",
+                color_discrete_sequence=px.colors.qualitative.Bold
+            )
+            fig_bar.update_layout(xaxis_tickangle=-30, margin=dict(l=20, r=20, t=50, b=50))
+            st.plotly_chart(fig_bar, use_container_width=True)
+        else:
+            st.info("💡 Plotly 패키지가 설치되지 않아 Streamlit 기본 차트로 표출합니다. (Streamlit Cloud 환경 시 requirements.txt 추가 권장)")
+            try:
+                chart_df = filtered_df.set_index(selected_x)[[selected_y]]
+                st.bar_chart(chart_df)
+            except Exception:
+                st.dataframe(filtered_df[[selected_x, selected_y]], use_container_width=True)
         
     with tab2:
         st.subheader("선 그래프")
-        fig_line = px.line(
-            filtered_df, 
-            x=selected_x, 
-            y=selected_y, 
-            color=color_val,
-            markers=True,
-            title=f"[{selected_x}] 기준 [{selected_y}] 변동 추세",
-            template="plotly_white"
-        )
-        fig_line.update_layout(xaxis_tickangle=-30, margin=dict(l=20, r=20, t=50, b=50))
-        st.plotly_chart(fig_line, use_container_width=True)
+        if HAS_PLOTLY:
+            fig_line = px.line(
+                filtered_df, 
+                x=selected_x, 
+                y=selected_y, 
+                color=color_val,
+                markers=True,
+                title=f"[{selected_x}] 기준 [{selected_y}] 변동 추세",
+                template="plotly_white"
+            )
+            fig_line.update_layout(xaxis_tickangle=-30, margin=dict(l=20, r=20, t=50, b=50))
+            st.plotly_chart(fig_line, use_container_width=True)
+        else:
+            st.info("💡 Plotly 패키지가 설치되지 않아 Streamlit 기본 차트로 표출합니다. (Streamlit Cloud 환경 시 requirements.txt 추가 권장)")
+            try:
+                chart_df = filtered_df.set_index(selected_x)[[selected_y]]
+                st.line_chart(chart_df)
+            except Exception:
+                st.dataframe(filtered_df[[selected_x, selected_y]], use_container_width=True)
+
 
 
 # ---------------------------------------------------------
